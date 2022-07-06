@@ -1,17 +1,21 @@
 pipeline{
-    agent any
-    tools {
-      maven 'maven3'
+    agent {
+        label 'slave-node'
     }
     environment {
-      DOCKER_TAG = getVersion()
+    DOCKERHUB_CREDENTIALS = credentials('kasi1995-dockerhub')
     }
+    tools {
+      maven 'maven'
+     
+    }
+  
     stages{
         stage('SCM'){
             steps{
-                git credentialsId: 'github', 
-                    url: 'https://github.com/javahometech/dockeransiblejenkins'
+            git 'https://github.com/kasiteja007/dockeransiblejenkins.git'
             }
+            
         }
         
         stage('Maven Build'){
@@ -22,29 +26,24 @@ pipeline{
         
         stage('Docker Build'){
             steps{
-                sh "docker build . -t kammana/hariapp:${DOCKER_TAG} "
+               sh 'docker build -t kasi1995/ansibleapp:$BUILD_NUMBER .'
             }
         }
         
         stage('DockerHub Push'){
             steps{
-                withCredentials([string(credentialsId: 'docker-hub', variable: 'dockerHubPwd')]) {
-                    sh "docker login -u kammana -p ${dockerHubPwd}"
-                }
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            
                 
-                sh "docker push kammana/hariapp:${DOCKER_TAG} "
+                sh 'docker push kasi1995/ansibleapp:$BUILD_NUMBER'
             }
         }
         
         stage('Docker Deploy'){
             steps{
-              ansiblePlaybook credentialsId: 'dev-server', disableHostKeyChecking: true, extras: "-e DOCKER_TAG=${DOCKER_TAG}", installation: 'ansible', inventory: 'dev.inv', playbook: 'deploy-docker.yml'
+              ansiblePlaybook credentialsId: 'dev-server', disableHostKeyChecking: true, extras: "-e BUILD_NUMBER=$BUILD_NUMBER",  installation: 'ansible', inventory: 'dev.inv', playbook: 'deploy-docker.yml'
             }
         }
     }
 }
 
-def getVersion(){
-    def commitHash = sh label: '', returnStdout: true, script: 'git rev-parse --short HEAD'
-    return commitHash
-}
