@@ -23,7 +23,7 @@ module "ecs-fargate" {
 
   cluster_id = aws_ecs_cluster.cluster.id
 
-  task_container_image   = "centos"
+  task_container_image   = "kasi1995/ansibleapp:$BUILD_NUMBER"
   task_definition_cpu    = 256
   task_definition_memory = 512
 
